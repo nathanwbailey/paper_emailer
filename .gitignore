@@ -2,3 +2,7 @@
 /.pytest_cache
 /.venv
 *.pyc
+*.py[cod]
+__pycache__/
+*.egg-info/
+.DS_Store
