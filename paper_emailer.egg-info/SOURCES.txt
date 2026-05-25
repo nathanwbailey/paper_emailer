@@ -1,0 +1,5 @@
+pyproject.toml
+paper_emailer.egg-info/PKG-INFO
+paper_emailer.egg-info/SOURCES.txt
+paper_emailer.egg-info/dependency_links.txt
+paper_emailer.egg-info/top_level.txt
