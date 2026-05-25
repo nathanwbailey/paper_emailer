@@ -17,4 +17,5 @@ src/paper_emailer.egg-info/requires.txt
 src/paper_emailer.egg-info/top_level.txt
 tests/test_emailer.py
 tests/test_filtering.py
+tests/test_recent_filtering.py
 tests/test_sources.py

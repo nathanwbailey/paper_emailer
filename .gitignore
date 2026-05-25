@@ -1,3 +1,4 @@
 /.paper_emailer
 /.pytest_cache
 /.venv
+*.pyc

@@ -6,10 +6,8 @@ if [ ! -d ".venv" ]; then
 fi
 
 . .venv/bin/activate
-python -m pip install --upgrade pip
+python -m pip install --upgrade pip uv
 
-if [ -f requirements.txt ]; then
-  pip install -r requirements.txt
-elif [ -f pyproject.toml ] && { [ -d src ] || [ -d paper_emailer ]; }; then
-  pip install -e ".[dev]"
+if [ -f pyproject.toml ] && { [ -d src ] || [ -d paper_emailer ]; }; then
+  uv sync --extra dev
 fi
