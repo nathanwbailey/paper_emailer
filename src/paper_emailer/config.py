@@ -42,6 +42,8 @@ class AppConfig:
     from_name: str = "Sustainable AI Digest"
     to_email: str = ""
     dry_run: bool = False
+    openrouter_api_key: str = ""
+    summarizer_model: str = "google/gemma-4-31b-it:free"
 
 
 def load_config(path: str | None = None) -> AppConfig:
@@ -55,6 +57,8 @@ def load_config(path: str | None = None) -> AppConfig:
     state_path = os.environ.get("PAPER_EMAILER_STATE_PATH")
     if state_path:
         config.state_path = Path(state_path)
+    config.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", config.openrouter_api_key)
+    config.summarizer_model = os.environ.get("SUMMARIZER_MODEL", config.summarizer_model)
     return config
 
 
@@ -71,4 +75,6 @@ def _load_json_config(path: Path, base: AppConfig) -> AppConfig:
         from_name=data.get("from_name", base.from_name),
         to_email=data.get("to_email", base.to_email),
         dry_run=bool(data.get("dry_run", base.dry_run)),
+        openrouter_api_key=data.get("openrouter_api_key", base.openrouter_api_key),
+        summarizer_model=data.get("summarizer_model", base.summarizer_model),
     )

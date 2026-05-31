@@ -3,6 +3,8 @@ from __future__ import annotations
 from email.message import EmailMessage
 from html import escape
 import json
+import logging
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .models import Digest, RankedItem
@@ -42,8 +44,15 @@ def send_sendgrid(message: EmailMessage, api_key: str) -> None:
         },
         method="POST",
     )
-    with urlopen(request, timeout=30) as response:
-        response.read()
+    try:
+        with urlopen(request, timeout=30) as response:
+            response.read()
+        logging.info("email sent via sendgrid")
+    except HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"SendGrid request failed: HTTP {error.code} {error.reason} — {body}") from error
+    except URLError as error:
+        raise RuntimeError(f"SendGrid request failed: {error.reason}") from error
 
 
 def _subject_for_digest(digest: Digest) -> str:
@@ -82,7 +91,7 @@ def _render_text(digest: Digest) -> str:
 def _render_item_html(ranked: RankedItem) -> str:
     reasons = ", ".join(escape(reason) for reason in ranked.reasons)
     authors = escape(", ".join(ranked.item.authors)) if ranked.item.authors else ""
-    summary = escape(ranked.item.summary[:400]) if ranked.item.summary else ""
+    summary = escape(ranked.item.summary) if ranked.item.summary else ""
     return f"""
     <div class="card">
       <div class="meta">{escape(ranked.item.source)} · score {ranked.score}</div>

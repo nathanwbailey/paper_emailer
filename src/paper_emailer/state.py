@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+import logging
 from pathlib import Path
 import sqlite3
 
@@ -63,3 +65,10 @@ class StateStore:
                     for ranked in items
                 ],
             )
+
+    def prune(self, days: int = 90) -> None:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        with self._connect() as connection:
+            cursor = connection.execute("DELETE FROM sent_items WHERE sent_at < ?", (cutoff,))
+            if cursor.rowcount:
+                logging.info("pruned %d old state record(s)", cursor.rowcount)

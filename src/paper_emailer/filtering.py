@@ -3,25 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from collections.abc import Iterable
 
+from .config import DEFAULT_KEYWORDS
 from .models import RankedItem, SourceItem
 
-
-DEFAULT_PHRASES = (
-    "sustainable ai",
-    "green ai",
-    "energy efficient",
-    "energy efficiency",
-    "carbon footprint",
-    "carbon emissions",
-    "low power",
-    "efficient training",
-    "efficient inference",
-    "model compression",
-    "hardware aware",
-    "quantization",
-    "distillation",
-    "responsible ai",
-)
+MIN_SCORE = 15
 
 
 def filter_recent_items(
@@ -44,12 +29,12 @@ def filter_recent_items(
     return recent
 
 
-def rank_items(items: Iterable[SourceItem], keywords: Iterable[str] = DEFAULT_PHRASES) -> list[RankedItem]:
+def rank_items(items: Iterable[SourceItem], keywords: Iterable[str] = DEFAULT_KEYWORDS) -> list[RankedItem]:
     ranked: list[RankedItem] = []
     for item in items:
         text = _item_text(item)
         score, reasons = _score_text(text, keywords)
-        if score > 0:
+        if score >= MIN_SCORE:
             ranked.append(RankedItem(item=item, score=score, reasons=tuple(reasons)))
     ranked.sort(key=lambda ranked_item: (-ranked_item.score, ranked_item.item.title.lower()))
     return ranked

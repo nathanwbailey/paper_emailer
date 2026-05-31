@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from datetime import datetime, timezone
+import logging
 
 from .config import AppConfig, SourceConfig, load_config
 from .emailer import build_digest_email, send_sendgrid
-from .filtering import filter_recent_items, rank_items
+from .filtering import rank_items
 from .models import Digest
 from .sources import fetch_sources
 from .state import StateStore
+from .summarizer import summarize_items
 
 
 def build_parser() -> ArgumentParser:
@@ -20,21 +22,41 @@ def build_parser() -> ArgumentParser:
 
 
 def main() -> int:
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     args = build_parser().parse_args()
     config = load_config(args.config)
     if args.dry_run:
         config.dry_run = True
+
+    if not config.dry_run:
+        if not config.sendgrid_api_key:
+            raise SystemExit("SENDGRID_API_KEY is required")
+        if not config.from_email or not config.to_email:
+            raise SystemExit("SENDGRID_FROM_EMAIL and SENDGRID_TO_EMAIL are required")
+
     if not config.sources:
         config.sources = [
             SourceConfig(kind="arxiv", value="sustainable ai", query="sustainable ai", content_type="paper"),
-            SourceConfig(kind="search", value="sustainable ai", query="sustainable ai", content_type="article"),
+            SourceConfig(kind="arxiv", value="energy efficient machine learning", query="energy efficient machine learning", content_type="paper"),
+            SourceConfig(kind="arxiv", value="carbon footprint neural network", query="carbon footprint neural network", content_type="paper"),
+            SourceConfig(kind="arxiv", value="green computing deep learning", query="green computing deep learning", content_type="paper"),
+            SourceConfig(kind="search", value="sustainable ai research", query="sustainable ai research", content_type="article"),
         ]
 
+    logging.info("fetching from %d source(s)", len(config.sources))
     items = fetch_sources(config.sources)
-    items = filter_recent_items(items, days=14)
+    logging.info("%d item(s) fetched", len(items))
     ranked = rank_items(items, config.keywords)
+    logging.info("%d item(s) after ranking", len(ranked))
     state = StateStore(config.state_path)
     new_items = state.filter_new(ranked)
+    logging.info("%d new item(s) to send", len(new_items))
+    new_items = summarize_items(new_items, config.openrouter_api_key, config.summarizer_model)
     digest = Digest(items=tuple(new_items))
 
     message = build_digest_email(digest, config.from_email, config.to_email, config.from_name)
@@ -44,12 +66,8 @@ def main() -> int:
     if config.dry_run:
         return 0
 
-    if not config.sendgrid_api_key:
-        raise SystemExit("SENDGRID_API_KEY is required")
-    if not config.from_email or not config.to_email:
-        raise SystemExit("SENDGRID_FROM_EMAIL and SENDGRID_TO_EMAIL are required")
-
-    if digest.items:
-        send_sendgrid(message, config.sendgrid_api_key)
+    send_sendgrid(message, config.sendgrid_api_key)
+    if new_items:
         state.record_sent(new_items, datetime.now(timezone.utc).isoformat())
+    state.prune()
     return 0

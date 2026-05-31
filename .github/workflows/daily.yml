@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.12"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -41,11 +41,16 @@ jobs:
       - name: Sync environment
         run: uv sync --extra dev
 
+      - name: Run tests
+        run: uv run pytest -v
+
       - name: Run digest
         env:
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
           SENDGRID_FROM_NAME: Sustainable AI Digest
           SENDGRID_TO_EMAIL: ${{ secrets.SENDGRID_TO_EMAIL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PAPER_EMAILER_STATE_PATH: .paper_emailer/state.sqlite3
+          PYTHONUNBUFFERED: "1"
         run: uv run paper-emailer

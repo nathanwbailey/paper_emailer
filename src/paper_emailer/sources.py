@@ -6,8 +6,8 @@ from html.parser import HTMLParser
 from urllib.error import URLError
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 from urllib.request import Request, urlopen
+import logging
 import re
-import sys
 import xml.etree.ElementTree as ET
 
 from .config import SourceConfig
@@ -23,7 +23,7 @@ def fetch_sources(sources: list[SourceConfig], timeout: int = 20) -> list[Source
         try:
             items.extend(fetch_source(source, timeout=timeout))
         except Exception as error:
-            print(f"warning: skipping {source.kind} source {source.value!r}: {error}", file=sys.stderr)
+            logging.warning("skipping %s source %r: %s", source.kind, source.value, error)
     return items
 
 
