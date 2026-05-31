@@ -74,9 +74,12 @@ def fetch_web_search(query: str, timeout: int = 20, content_type: str = "article
 
 
 def fetch_arxiv(query: str, timeout: int = 20, content_type: str = "paper") -> list[SourceItem]:
+    # Use query verbatim when it already contains field specifiers (ti:, abs:, cat:),
+    # otherwise prefix with all: to search across all fields.
+    prefixed = query if (":" in query) else f"all:{query}"
     search_url = (
         "https://export.arxiv.org/api/query?"
-        f"search_query=all:{quote_plus(query)}&sortBy=submittedDate&sortOrder=descending&max_results=25"
+        f"search_query={quote_plus(prefixed)}&sortBy=relevance&max_results=50"
     )
     root = ET.fromstring(_http_get(search_url, timeout=timeout))
     items: list[SourceItem] = []

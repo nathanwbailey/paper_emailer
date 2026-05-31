@@ -81,7 +81,8 @@ def _render_text(digest: Digest) -> str:
         lines.append("No matching papers or articles were found today.")
         return "\n".join(lines)
     for ranked in digest.items:
-        lines.append(f"- {ranked.item.title} ({ranked.item.source})")
+        pub = f" · {ranked.item.published_at.strftime('%-d %b %Y')}" if ranked.item.published_at else ""
+        lines.append(f"- {ranked.item.title} ({ranked.item.source}{pub})")
         lines.append(f"  {ranked.item.url}")
         if ranked.reasons:
             lines.append(f"  matched: {', '.join(ranked.reasons)}")
@@ -92,9 +93,14 @@ def _render_item_html(ranked: RankedItem) -> str:
     reasons = ", ".join(escape(reason) for reason in ranked.reasons)
     authors = escape(", ".join(ranked.item.authors)) if ranked.item.authors else ""
     summary = escape(ranked.item.summary) if ranked.item.summary else ""
+    pub_date = ranked.item.published_at.strftime("%-d %b %Y") if ranked.item.published_at else ""
+    meta_parts = [escape(ranked.item.source), f"relevance {ranked.score:.0%}"]
+    if pub_date:
+        meta_parts.append(escape(pub_date))
+    meta = " · ".join(meta_parts)
     return f"""
     <div class="card">
-      <div class="meta">{escape(ranked.item.source)} · relevance {ranked.score:.0%}</div>
+      <div class="meta">{meta}</div>
       <h2><a href="{escape(ranked.item.url)}">{escape(ranked.item.title)}</a></h2>
       {f'<div class="authors">{authors}</div>' if authors else ''}
       {f'<p>{summary}</p>' if summary else ''}
