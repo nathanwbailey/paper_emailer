@@ -18,6 +18,7 @@ def build_parser() -> ArgumentParser:
     parser.add_argument("--config", help="Path to JSON config file", default=None)
     parser.add_argument("--dry-run", action="store_true", help="Render locally without sending")
     parser.add_argument("--show-email", action="store_true", help="Print the rendered email")
+    parser.add_argument("--summarize", action="store_true", help="Summarize items via LLM (off by default)")
     return parser
 
 
@@ -32,6 +33,8 @@ def main() -> int:
     config = load_config(args.config)
     if args.dry_run:
         config.dry_run = True
+    if args.summarize:
+        config.summarize = True
 
     if not config.dry_run:
         if not config.sendgrid_api_key:
@@ -41,10 +44,16 @@ def main() -> int:
 
     if not config.sources:
         config.sources = [
+            # broad concept queries
             SourceConfig(kind="arxiv", value="sustainable ai", query="sustainable ai", content_type="paper"),
-            SourceConfig(kind="arxiv", value="energy efficient machine learning", query="energy efficient machine learning", content_type="paper"),
-            SourceConfig(kind="arxiv", value="carbon footprint neural network", query="carbon footprint neural network", content_type="paper"),
-            SourceConfig(kind="arxiv", value="green computing deep learning", query="green computing deep learning", content_type="paper"),
+            SourceConfig(kind="arxiv", value="green ai", query="green ai computing", content_type="paper"),
+            # title-targeted: catches vocabulary arXiv-concept queries miss
+            SourceConfig(kind="arxiv", value="ti:energy AND ti:LLM", query="ti:energy AND ti:LLM", content_type="paper"),
+            SourceConfig(kind="arxiv", value="ti:carbon AND ti:footprint", query="ti:carbon AND ti:footprint", content_type="paper"),
+            SourceConfig(kind="arxiv", value="ti:energy AND ti:efficient AND ti:neural", query="ti:energy AND ti:efficient AND ti:neural", content_type="paper"),
+            # cs.CY = Computers and Society — where environmental impact papers are classified
+            SourceConfig(kind="arxiv", value="cat:cs.CY AND (abs:energy OR abs:carbon OR abs:sustainability)", query="cat:cs.CY AND (abs:energy OR abs:carbon OR abs:sustainability)", content_type="paper"),
+            # web search for news/articles
             SourceConfig(kind="search", value="sustainable ai research", query="sustainable ai research", content_type="article"),
         ]
 
@@ -56,7 +65,8 @@ def main() -> int:
     state = StateStore(config.state_path)
     new_items = state.filter_new(ranked)
     logging.info("%d new item(s) to send", len(new_items))
-    new_items = summarize_items(new_items, config.openrouter_api_key, config.summarizer_model)
+    if config.summarize:
+        new_items = summarize_items(new_items, config.openrouter_api_key, config.summarizer_model)
     digest = Digest(items=tuple(new_items))
 
     message = build_digest_email(digest, config.from_email, config.to_email, config.from_name)

@@ -7,6 +7,7 @@ name = "paper-emailer"
 version = "0.1.0"
 description = "Python workspace for paper_emailer"
 requires-python = ">=3.12"
+dependencies = ["fastembed>=0.4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.4", "python-dotenv>=1.0"]

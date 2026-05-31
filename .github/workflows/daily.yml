@@ -38,6 +38,12 @@ jobs:
           restore-keys: |
             paper-emailer-state-
 
+      - name: Restore embedding model cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/fastembed
+          key: fastembed-bge-small-en-v1.5
+
       - name: Sync environment
         run: uv sync --extra dev
 

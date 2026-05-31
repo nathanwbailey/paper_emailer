@@ -22,7 +22,7 @@ class SourceItem:
 @dataclass(frozen=True, slots=True)
 class RankedItem:
     item: SourceItem
-    score: int
+    score: float
     reasons: tuple[str, ...] = ()
 
 

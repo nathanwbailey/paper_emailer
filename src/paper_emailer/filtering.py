@@ -5,8 +5,7 @@ from collections.abc import Iterable
 
 from .config import DEFAULT_KEYWORDS
 from .models import RankedItem, SourceItem
-
-MIN_SCORE = 15
+from .semantic_scorer import _MIN_SIMILARITY, semantic_score
 
 
 def filter_recent_items(
@@ -29,32 +28,30 @@ def filter_recent_items(
     return recent
 
 
-def rank_items(items: Iterable[SourceItem], keywords: Iterable[str] = DEFAULT_KEYWORDS) -> list[RankedItem]:
+def rank_items(
+    items: Iterable[SourceItem],
+    keywords: Iterable[str] = DEFAULT_KEYWORDS,
+    threshold: float = _MIN_SIMILARITY,
+) -> list[RankedItem]:
     ranked: list[RankedItem] = []
     for item in items:
-        text = _item_text(item)
-        score, reasons = _score_text(text, keywords)
-        if score >= MIN_SCORE:
-            ranked.append(RankedItem(item=item, score=score, reasons=tuple(reasons)))
-    ranked.sort(key=lambda ranked_item: (-ranked_item.score, ranked_item.item.title.lower()))
+        score = semantic_score(item)
+        if score < threshold:
+            continue
+        reasons = _keyword_reasons(_item_text(item), keywords)
+        ranked.append(RankedItem(item=item, score=score, reasons=tuple(reasons)))
+    ranked.sort(key=lambda r: (-r.score, r.item.title.lower()))
     return ranked
 
 
-def _score_text(text: str, keywords: Iterable[str]) -> tuple[int, list[str]]:
-    score = 0
-    reasons: list[str] = []
+def _keyword_reasons(text: str, keywords: Iterable[str]) -> list[str]:
+    """Return matched keyword labels for display — not used for scoring."""
     lowered = text.lower()
-    for keyword in keywords:
-        keyword = keyword.strip().lower()
-        if not keyword:
-            continue
-        hits = lowered.count(keyword)
-        if hits:
-            score += len(keyword.replace(" ", "")) + (hits - 1)
-            reasons.append(keyword)
-    if any(term in lowered for term in ("energy", "carbon", "emission", "power", "efficient")):
-        score += 1
-    return score, reasons
+    return [
+        kw.strip().lower()
+        for kw in keywords
+        if kw.strip() and kw.strip().lower() in lowered
+    ]
 
 
 def _item_text(item: SourceItem) -> str:

@@ -94,7 +94,7 @@ def _render_item_html(ranked: RankedItem) -> str:
     summary = escape(ranked.item.summary) if ranked.item.summary else ""
     return f"""
     <div class="card">
-      <div class="meta">{escape(ranked.item.source)} · score {ranked.score}</div>
+      <div class="meta">{escape(ranked.item.source)} · relevance {ranked.score:.0%}</div>
       <h2><a href="{escape(ranked.item.url)}">{escape(ranked.item.title)}</a></h2>
       {f'<div class="authors">{authors}</div>' if authors else ''}
       {f'<p>{summary}</p>' if summary else ''}
