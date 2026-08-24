@@ -10,6 +10,10 @@ from urllib.request import Request, urlopen
 from .models import Digest, RankedItem
 
 
+class SendGridCreditExceededError(RuntimeError):
+    pass
+
+
 def build_digest_email(digest: Digest, from_email: str, to_email: str, from_name: str) -> EmailMessage:
     subject = _subject_for_digest(digest)
     html = _render_html(digest)
@@ -50,6 +54,8 @@ def send_sendgrid(message: EmailMessage, api_key: str) -> None:
         logging.info("email sent via sendgrid")
     except HTTPError as error:
         body = error.read().decode("utf-8", errors="replace")
+        if error.code == 401 and "Maximum credits exceeded" in body:
+            raise SendGridCreditExceededError(body) from error
         raise RuntimeError(f"SendGrid request failed: HTTP {error.code} {error.reason} — {body}") from error
     except URLError as error:
         raise RuntimeError(f"SendGrid request failed: {error.reason}") from error

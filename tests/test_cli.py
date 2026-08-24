@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from paper_emailer.cli import main
+from paper_emailer.emailer import SendGridCreditExceededError
+from paper_emailer.models import RankedItem, SourceItem
 
 
 def test_dry_run_exits_zero(tmp_path, monkeypatch):
@@ -72,3 +74,20 @@ def test_email_sent_even_with_no_new_items(tmp_path, monkeypatch):
         result = _run_main([])
     assert result == 0
     mock_send.assert_called_once()
+
+
+def test_sendgrid_credit_exhausted_returns_zero_without_recording_state(tmp_path, monkeypatch):
+    monkeypatch.setenv("SENDGRID_API_KEY", "key")
+    monkeypatch.setenv("SENDGRID_FROM_EMAIL", "from@example.com")
+    monkeypatch.setenv("SENDGRID_TO_EMAIL", "to@example.com")
+    monkeypatch.setenv("PAPER_EMAILER_STATE_PATH", str(tmp_path / "state.sqlite3"))
+    ranked = RankedItem(item=SourceItem(title="t", url="https://example.com", source="arXiv"), score=0.9)
+    mock_state = MagicMock()
+    mock_state.filter_new.return_value = [ranked]
+    with patch("paper_emailer.cli.fetch_sources", return_value=[ranked.item]), \
+         patch("paper_emailer.cli.rank_items", return_value=[ranked]), \
+         patch("paper_emailer.cli.StateStore", return_value=mock_state), \
+         patch("paper_emailer.cli.send_sendgrid", side_effect=SendGridCreditExceededError("Maximum credits exceeded")):
+        result = _run_main([])
+    assert result == 0
+    mock_state.record_sent.assert_not_called()

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import logging
 
 from .config import AppConfig, SourceConfig, load_config
-from .emailer import build_digest_email, send_sendgrid
+from .emailer import SendGridCreditExceededError, build_digest_email, send_sendgrid
 from .filtering import rank_items
 from .models import Digest
 from .sources import fetch_sources
@@ -76,7 +76,11 @@ def main() -> int:
     if config.dry_run:
         return 0
 
-    send_sendgrid(message, config.sendgrid_api_key)
+    try:
+        send_sendgrid(message, config.sendgrid_api_key)
+    except SendGridCreditExceededError as error:
+        logging.warning("skipping send: SendGrid credits exceeded (%s)", error)
+        return 0
     if new_items:
         state.record_sent(new_items, datetime.now(timezone.utc).isoformat())
     state.prune()
